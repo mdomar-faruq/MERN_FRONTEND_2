@@ -14,8 +14,8 @@ function App() {
     }
 
     Axios.post('http://localhost:3001/addfriend', { name, age })
-      .then(() => {
-        setListOfFriends([...listOfFriends, { name: name, age: age }]);
+      .then((response) => {
+        setListOfFriends([...listOfFriends, {_id:response.data._id, name: name, age: age }]);
       })
       .catch((error) => {
         console.error('Error adding friend:', error);
@@ -24,7 +24,7 @@ function App() {
 
   const updateFriend = async (id) => {
     try {
-      const newAge = prompt("Enter new age: ");
+      const newAge = prompt("Enter a valid numeric age:");
       if (!newAge || isNaN(newAge)) {
         console.error("Invalid age entered. Please enter a numeric value.");
         return;
@@ -33,17 +33,36 @@ function App() {
       const response = await Axios.put('http://localhost:3001/update', {
         newAge: newAge,
         id: id
-      }).then(()=>{
-        setListOfFriends(listOfFriends.map((val)=>{
-          return val._id == id ? {_id: id, name: val.name, age: newAge} : val;
-        }))
       });
+  
+      setListOfFriends((prevList) =>
+        prevList.map((val) =>
+          val._id === id ? { ...val, age: newAge } : val
+        )
+      );
   
       console.log("Friend updated successfully:", response.data);
     } catch (error) {
       console.error("Error updating friend:", error.message);
+      alert("Failed to update friend. Please try again later.");
     }
   };
+
+  const deleteFriend = async (id) => {
+    try {
+      // Send DELETE request to backend
+      await Axios.delete(`http://localhost:3001/delete/${id}`);
+      // Update the state by filtering out the deleted friend
+      setListOfFriends((prevList) =>
+        prevList.filter((val) => val._id !== id)
+      );
+      console.log("Friend deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting friend:", error.message);
+      alert("Failed to delete friend. Please try again.");
+    }
+  };
+  
 
   useEffect(() => {
     Axios.get('http://localhost:3001/read')
@@ -70,14 +89,14 @@ function App() {
       <div className='listOfFriends'>
         {listOfFriends.map((val) => {
           return (
-              <div className='friendContainer'>
-                <div className='friend'>
-                  <h3> <b>Name:</b>{val.name}</h3>
-                  <h3> <b>Age:</b>{val.age}</h3>
-                </div>
-                <button onClick={()=>{updateFriend(val._id)}}>Update</button>
-                <button id="removeBtn">X</button>
+            <div className='friendContainer' key={val._id}>
+              <div className='friend'>
+                <h3> <b>Name:</b>{val.name}</h3>
+                <h3> <b>Age:</b>{val.age}</h3>
               </div>
+              <button onClick={() => { updateFriend(val._id) }}>Update</button>
+              <button id="removeBtn" onClick={() => { deleteFriend(val._id) }}>X</button>
+            </div>
           );
         })};
 
